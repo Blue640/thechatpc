@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GMRS-R64</title>
+    <style>
+        :root {
+            --case-color: #262626;
+            --lcd-bg: #8ba870;
+            --lcd-text: #1a2012;
+            --btn-ptt: #9e2323;
+            --plastic: url('https://www.transparenttextures.com/patterns/dark-matter.png');
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            background: #111; 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Оверлей разблокировки */
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 1000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; color: #fff; padding: 20px;
+        }
+        #startBtn {
+            margin-top: 20px; padding: 15px 40px; font-size: 18px; font-weight: bold;
+            background: #333; color: #fff; border: 2px solid #555; border-radius: 8px;
+            cursor: pointer; text-transform: uppercase;
+        }
+
+        /* Основной корпус рации */
+        .radio-unit {
+            width: 90vw; max-width: 360px; height: 90vh; max-height: 680px;
+            background: var(--case-color); background-image: var(--plastic);
+            border: 4px solid #111; border-radius: 30px 30px 50px 50px;
+            padding: 15px; display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 2px 3px rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        /* Антенна */
+        .antenna {
+            position: absolute; top: -50px; left: 40px; width: 18px; height: 60px;
+            background: #151515; border-radius: 4px 4px 0 0;
+        }
+
+        /* Светодиоды */
+        .led-panel { display: flex; gap: 8px; margin-bottom: 10px; width: 100%; padding-left: 10px; }
+        .led { width: 7px; height: 7px; border-radius: 50%; background: #000; border: 1px solid #333; }
+        .led.active-rx { background: #0f0; box-shadow: 0 0 8px #0f0; }
+        .led.active-tx { background: #f00; box-shadow: 0 0 8px #f00; }
+
+        /* Сетка динамика */
+        .speaker {
+            width: 100%; height: 18%; background: #1a1a1a;
+            background-image: radial-gradient(#111 25%, transparent 25%);
+            background-size: 5px 5px; border-radius: 10px; border: 2px solid #111;
+            margin-bottom: 15px;
+        }
+
+        /* LCD Экран */
+        .lcd-frame {
+            width: 100%; background: #000; padding: 8px; border-radius: 6px;
+            border: 3px solid #1a1a1a; margin-bottom: 15px;
+        }
+        .lcd-display {
+            background: var(--lcd-bg); height: 90px; border-radius: 2px;
+            padding: 8px; display: flex; flex-direction: column; justify-content: space-between;
+            color: var(--lcd-text); font-family: 'Courier New', monospace; font-weight: bold;
+            position: relative; overflow: hidden;
+        }
+        /* Текстура сетки на экране */
+        .lcd-display::before {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 2px);
+            pointer-events: none;
+        }
+
+        .freq-row { font-size: 28px; letter-spacing: 1px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.2); }
+        .info-row { display: flex; justify-content: space-between; font-size: 13px; text-transform: uppercase; }
+
+        /* Управление */
+        .knob-row { display: flex; gap: 20px; margin-bottom: 15px; }
+        .knob-label { display: flex; flex-direction: column; align-items: center; font-size: 9px; color: #888; font-weight: bold; }
+        .knob {
+            width: 55px; height: 55px; background: #222; border: 4px solid #111;
+            border-radius: 50%; position: relative; cursor: pointer; transition: transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+        }
+        .knob::after { content: ""; position: absolute; top: 5px; left: 50%; width: 4px; height: 18px; background: #444; transform: translateX(-50%); border-radius: 2px; }
+
+        /* Поле ввода */
+        .input-wrap { width: 100%; padding: 0 10px; }
+        #msgInput {
+            width: 100%; background: #1a1a1a; border: 2px solid #333;
+            color: #fff; padding: 15px; font-size: 16px; border-radius: 8px;
+            outline: none; margin-bottom: 15px; text-align: center;
+        }
+
+        /* Кнопка PTT */
+        .ptt-btn {
+            width: 100%;
+            background: linear-gradient(180deg, #242322 0%, #242323 100%);
+            color: #818176;
+            border: 2px solid #222222;
+            border-bottom: 8px solid #222222;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.05s ease;
+            box-shadow: inset 0 1px 3px rgba(255,255,255,0.2), 0 5px 15px rgba(0,0,0,0.5);
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .ptt-btn:active {
+            transform: translateY(6px);
+            border-bottom-width: 2px;
+            background: linear-gradient(180deg, #1b1b1b 0%, #1a1a1a 100%);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .footer-tag { margin-top: auto; font-size: 10px; color: #444; letter-spacing: 2px; padding-bottom: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <h2>GMRS-R64</h2>
+        <p>СИСТЕМА СВЯЗИ ГОТОВА</p>
+        <button id="startBtn">ЗАПУСК</button>
+    </div>
+
+    <div class="radio-unit">
+        <div class="antenna"></div>
+        <div class="led-panel">
+            <div id="rxLed" class="led"></div>
+            <div id="txLed" class="led"></div>
+        </div>
+        <div class="speaker"></div>
+        
+        <div class="lcd-frame">
+            <div class="lcd-display">
+                <div class="info-row">
+                    <span id="statText">STANDBY</span>
+                    <span>PTT MODE</span>
+                </div>
+                <div class="freq-row" id="freqDisp">462.5625</div>
+                <div class="info-row">
+                    <span>CH: <span id="chVal">01</span></span>
+                    <span>CODE: <span id="coVal">00</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="knob-row">
+            <div class="knob-label">
+                <div class="knob" id="chKnob"></div>
+                CHANNEL
+            </div>
+            <div class="knob-label">
+                <div class="knob" id="coKnob"></div>
+                SUB-CODE
+            </div>
+        </div>
+
+        <div class="input-wrap">
+            <input type="text" id="msgInput" placeholder="ТЕКСТ..." maxlength="200" autocomplete="off">
+            <button class="ptt-btn" id="pttBtn">ПЕРЕДАЧА</button>
+        </div>
+        
+        <div class="footer-tag">BY BLUE</div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://thechat-ea344-default-rtdb.europe-west1.firebasedatabase.app/" };
+        const FREQS = ["462.5625", "462.5875", "462.6125", "462.6375", "462.6625", "462.6875", "462.7125", "467.5625", "467.5875", "467.6125"];
+
+        let db, chatRef, audioCtx, noiseGain, radioFilter;
+        let curCH = 0, curCODE = 0, isReceiving = false, isFirst = true, myLast = "";
+
+        const ui = {
+            freq: document.getElementById('freqDisp'),
+            stat: document.getElementById('statText'),
+            chVal: document.getElementById('chVal'),
+            coVal: document.getElementById('coVal'),
+            chKnob: document.getElementById('chKnob'),
+            coKnob: document.getElementById('coKnob'),
+            input: document.getElementById('msgInput'),
+            ptt: document.getElementById('pttBtn'),
+            rxLed: document.getElementById('rxLed'),
+            txLed: document.getElementById('txLed')
+        };
+
+        document.getElementById('startBtn').onclick = () => {
+            document.getElementById('overlay').style.display = 'none';
+            initAudio();
+            initFirebase();
+        };
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            radioFilter = audioCtx.createBiquadFilter();
+            radioFilter.type = "bandpass";
+            radioFilter.frequency.value = 1300; 
+            radioFilter.Q.value = 1.5;
+            radioFilter.connect(audioCtx.destination);
+
+            noiseGain = audioCtx.createGain();
+            noiseGain.gain.value = 0;
+            const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer; source.loop = true;
+            source.connect(noiseGain); noiseGain.connect(radioFilter);
+            source.start();
+        }
+
+        function playTone(file) {
+            if (!audioCtx) return;
+            const audio = new Audio(`./${file}.wav`);
+            const src = audioCtx.createMediaElementSource(audio);
+            src.connect(radioFilter);
+            audio.play().catch(e => console.log("Audio play error"));
+        }
+
+        function playSpeech(text) {
+            if (isReceiving || !text) return;
+            isReceiving = true;
+            ui.stat.innerText = "INCOMING";
+            ui.rxLed.classList.add('active-rx');
+            playTone('radioon');
+
+            setTimeout(() => { noiseGain.gain.setTargetAtTime(0.015, audioCtx.currentTime, 0.05); }, 200);
+
+            setTimeout(() => {
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'ru-RU';
+                utter.pitch = 0.8;
+                utter.onend = () => {
+                    playTone('radiooff');
+                    noiseGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+                    ui.rxLed.classList.remove('active-rx');
+                    setTimeout(() => { ui.stat.innerText = "STANDBY"; isReceiving = false; }, 400);
+                };
+                window.speechSynthesis.speak(utter);
+            }, 600);
+        }
+
+        function initFirebase() {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            sync();
+        }
+
+        function sync() {
+            if (chatRef) chatRef.off();
+            isFirst = true;
+            ui.chVal.innerText = (curCH + 1).toString().padStart(2, '0');
+            ui.freq.innerText = FREQS[curCH];
+            ui.coVal.innerText = curCODE.toString().padStart(2, '0');
+            ui.stat.innerText = "SYNCING";
+
+            chatRef = db.ref(`tact/ch_${curCH}/co_${curCODE}`);
+            chatRef.on('value', snap => {
+                const data = snap.val();
+                if (!data) return;
+
+                if (isFirst) { 
+                    isFirst = false; 
+                    ui.stat.innerText = "STANDBY"; 
+                    return; 
+                }
+
+                const msgId = (data.text || "") + "_" + (data.time || 0);
+                if (msgId !== myLast && !isReceiving) {
+                    playSpeech(data.text);
+                }
+            });
+        }
+
+        ui.chKnob.onclick = () => {
+            curCH = (curCH + 1) % FREQS.length;
+            ui.chKnob.style.transform = `rotate(${curCH * 36}deg)`;
+            sync();
+        };
+
+        ui.coKnob.onclick = () => {
+            curCODE = (curCODE + 1) % 50;
+            ui.coKnob.style.transform = `rotate(${curCODE * 7.2}deg)`;
+            sync();
+        };
+
+        ui.ptt.onclick = () => {
+            const val = ui.input.value.trim();
+            if (val && !isReceiving) {
+                playTone('radioon'); 
+                
+                const timestamp = Date.now();
+                myLast = val + "_" + timestamp;
+                
+                ui.txLed.classList.add('active-tx');
+                ui.stat.innerText = "TRANSMIT";
+
+                chatRef.set({
+                    text: val,
+                    time: timestamp
+                });
+
+                ui.input.value = '';
+
+                setTimeout(() => { 
+                    ui.txLed.classList.remove('active-tx');
+                    ui.stat.innerText = "STANDBY"; 
+                }, 1200);
+            }
+        };
+
+        window.speechSynthesis.getVoices();
+    </script>
+</body>
+</html>
