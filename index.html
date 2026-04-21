@@ -76,7 +76,6 @@
             color: var(--lcd-text); font-family: 'Courier New', monospace; font-weight: bold;
             position: relative; overflow: hidden;
         }
-        /* Текстура сетки на экране */
         .lcd-display::before {
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: repeating-linear-gradient(rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 2px);
@@ -106,31 +105,32 @@
 
         /* Кнопка PTT */
         .ptt-btn {
-            width: 100%;
-            background: linear-gradient(180deg, #242322 0%, #242323 100%);
-            color: #818176;
-            border: 2px solid #222222;
-            border-bottom: 8px solid #222222;
-            padding: 20px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.05s ease;
+            width: 100%; background: linear-gradient(180deg, #242322 0%, #242323 100%);
+            color: #818176; border: 2px solid #222222; border-bottom: 8px solid #222222;
+            padding: 20px; font-size: 18px; font-weight: bold; border-radius: 12px;
+            cursor: pointer; text-transform: uppercase; transition: all 0.05s ease;
             box-shadow: inset 0 1px 3px rgba(255,255,255,0.2), 0 5px 15px rgba(0,0,0,0.5);
-            font-family: 'Orbitron', sans-serif;
         }
-
         .ptt-btn:active {
-            transform: translateY(6px);
-            border-bottom-width: 2px;
+            transform: translateY(6px); border-bottom-width: 2px;
             background: linear-gradient(180deg, #1b1b1b 0%, #1a1a1a 100%);
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
         }
 
         .footer-tag { margin-top: auto; font-size: 10px; color: #444; letter-spacing: 2px; padding-bottom: 5px; }
 
+        /* Стиль кнопки PIN */
+        .ontop-btn {
+            font-size: 12px; font-family: monospace; font-weight: bold;
+            background: #1a1a1a; color: #0f0; border: 1px solid #0f0;
+            padding: 4px 8px; cursor: pointer; border-radius: 3px;
+        }
+        .ontop-btn.active { background: #0f0; color: #000; box-shadow: 0 0 10px #0f0; }
+
+        /* Контейнер для кнопки PIN */
+        #pinContainer {
+            position: fixed; top: 10px; right: 10px; z-index: 99999;
+        }
     </style>
 </head>
 <body>
@@ -139,6 +139,10 @@
         <h2>GMRS-R64</h2>
         <p>СИСТЕМА СВЯЗИ ГОТОВА</p>
         <button id="startBtn">ЗАПУСК</button>
+    </div>
+
+    <div id="pinContainer">
+        <button id="onTopToggle" class="ontop-btn">PIN</button>
     </div>
 
     <div class="radio-unit">
@@ -186,6 +190,29 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
+        // --- 1. ЛОГИКА КНОПКИ PIN (ELECTRON) ---
+        try {
+            const { ipcRenderer } = require('electron');
+            let isOnTop = false;
+            
+            document.getElementById('onTopToggle').onclick = function(e) {
+                isOnTop = !isOnTop;
+                ipcRenderer.send('set-on-top', isOnTop);
+                
+                if (isOnTop) {
+                    this.classList.add('active');
+                    this.innerText = 'PINNED';
+                } else {
+                    this.classList.remove('active');
+                    this.innerText = 'PIN';
+                }
+            };
+        } catch (error) {
+            // Если открыто в браузере, прячем кнопку PIN
+            document.getElementById('pinContainer').style.display = 'none';
+        }
+
+        // --- 2. ЛОГИКА РАЦИИ И FIREBASE ---
         const firebaseConfig = { databaseURL: "https://thechat-ea344-default-rtdb.europe-west1.firebasedatabase.app/" };
         const FREQS = ["462.5625", "462.5875", "462.6125", "462.6375", "462.6625", "462.6875", "462.7125", "467.5625", "467.5875", "467.6125"];
 
